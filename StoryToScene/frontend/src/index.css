@@ -31,6 +31,8 @@
   color-scheme: light;
   font-family: var(--font-sans);
   font-synthesis: none;
+  min-height: 100%;
+  margin: 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -82,7 +84,9 @@ body {
    * Thang weight: heading 600–700 · nội dung 400–500 · button/label 500–600.
    * Fallback hệ thống (Segoe UI, Roboto, Helvetica Neue…) đều có đủ tiếng Việt.
    */
-  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans:
+    "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   --font-heading: var(--font-sans);
   /* Preflight của Tailwind gán monospace cho code/kbd/pre/samp → cũng dùng font chính */
   --default-mono-font-family: var(--font-sans);
@@ -163,11 +167,15 @@ body {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;}
+    @apply border-border outline-ring/50;
+  }
   body {
-    @apply bg-background text-foreground;}
+    @apply bg-background text-foreground;
+  }
   html {
-    @apply font-sans;}}
+    @apply font-sans;
+  }
+}
 
 @layer base {
   html {
