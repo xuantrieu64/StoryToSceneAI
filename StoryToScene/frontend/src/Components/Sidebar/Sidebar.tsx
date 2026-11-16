@@ -15,11 +15,10 @@ function NavigationItem({ active = false, collapsed = false, icon, label }: Navi
   return (
     <button
       aria-current={active ? 'page' : undefined}
-      className={`flex min-h-10 w-full items-center rounded-lg px-[14px] py-2.5 text-left text-[13.5px] transition-colors ${
-        active
-          ? 'bg-[#eaf7e9] text-[#39b536]'
-          : 'text-[#4b5563] hover:bg-gray-50'
-      }`}
+      className={`flex min-h-10 w-full items-center rounded-lg px-[14px] py-2.5 text-left text-[13.5px] transition-colors ${active
+        ? 'bg-[#eaf7e9] text-[#39b536]'
+        : 'text-[#4b5563] hover:bg-gray-50'
+        }`}
       type="button"
     >
       {icon === 'folder' ? <FolderIcon /> : <ListIcon />}
@@ -30,15 +29,28 @@ function NavigationItem({ active = false, collapsed = false, icon, label }: Navi
 
 export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const toggleButton = (
+    <button
+      aria-expanded={!collapsed}
+      aria-label={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
+      className="grid size-10 shrink-0 place-items-center rounded-md p-1 text-[#9ca3af] hover:bg-[#e6ffe6] max-[760px]:hidden"
+      onClick={() => setCollapsed((value) => !value)}
+      type="button"
+    >
+      <PanelIcon />
+    </button>
+  )
 
   return (
     <aside
-      className={`relative flex min-h-screen shrink-0 flex-col justify-between border-r border-[rgba(229,231,235,0.8)] bg-white transition-[width] duration-200 max-[760px]:w-[68px] ${
-        collapsed ? 'w-[76px]' : 'w-64'
-      }`}
+      className={`relative flex min-h-screen shrink-0 flex-col justify-between border-r border-[rgba(229,231,235,0.8)] bg-white transition-[width] duration-200 max-[760px]:w-[68px] ${collapsed ? 'w-[76px]' : 'w-64'
+        }`}
     >
       <div className={`pb-4 pt-5 max-[760px]:px-2 ${collapsed ? 'px-2' : 'px-4'}`}>
-        <div className={`mb-6 flex h-6 items-center justify-between px-1 max-[760px]:justify-center max-[760px]:px-0 ${collapsed ? 'justify-center' : ''}`}>
+        <div
+          className={`mb-6 flex h-6 items-center px-1 max-[760px]:justify-center max-[760px]:px-0 ${collapsed ? 'justify-center' : 'justify-between'
+            }`}
+        >
           <a
             aria-label="StoryToScene, trang chủ"
             className="flex min-w-0 items-center text-[15px] font-bold tracking-[-0.375px] text-[#111827]"
@@ -49,19 +61,15 @@ export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
               StoryToScene
             </span>
           </a>
-          <button
-            aria-label={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
-            className={`grid size-7 shrink-0 place-items-center rounded-md p-1 text-[#9ca3af] hover:bg-gray-100 max-[760px]:hidden ${
-              collapsed ? 'absolute right-1 top-5' : 'relative'
-            }`}
-            onClick={() => setCollapsed((value) => !value)}
-            type="button"
-          >
-            <PanelIcon />
-          </button>
+
+          {/* Mở rộng: nút cùng hàng với logo */}
+          {!collapsed && toggleButton}
         </div>
 
         <nav aria-label="Điều hướng chính" className="grid gap-1">
+          {/* Thu gọn: nút nằm trên icon "Dự án của tôi" */}
+          {collapsed && <div className="mb-1 flex justify-center max-[760px]:hidden">{toggleButton}</div>}
+
           <NavigationItem active={activeItem === 'projects'} collapsed={collapsed} icon="folder" label="Dự án của tôi" />
           <NavigationItem active={activeItem === 'tasks'} collapsed={collapsed} icon="list" label="Danh sách việc" />
         </nav>
@@ -75,7 +83,7 @@ export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
           <span className="grid size-5 shrink-0 place-items-center rounded-full border border-[#9ca3af] text-[#6b7280]">
             <PlayIcon />
           </span>
-          <span className="max-[760px]:hidden">Hướng dẫn</span>
+          <span className={collapsed ? 'hidden' : 'max-[760px]:hidden'}>Hướng dẫn</span>
         </button>
 
         <div className={`mt-2 rounded-xl border border-[#b9e3b6] bg-[#f3faf2] p-3 ${collapsed ? 'hidden' : 'max-[760px]:hidden'}`}>
