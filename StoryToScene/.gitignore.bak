@@ -1,0 +1,16 @@
+# Bí mật, tuyệt đối không commit
+.env
+backend.env
+!.env.example
+
+# Dữ liệu sinh ra
+*.sql
+*.sql.gz
+/backups/
+
+# Hệ điều hành, IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,7 +1,8 @@
 # Bí mật, tuyệt đối không commit
 .env
-backend.env
+backend/.env
 !.env.example
+.env.bak
 
 # Dữ liệu sinh ra
 *.sql
