@@ -1,44 +1,41 @@
-import { BadgeCheck, Clapperboard, Lock } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
-import { anchor, sectionIds } from '@/config/site-links'
-import { cn } from '@/lib/utils'
-import { tryFreeLink } from '../data/home-content'
+import { ArrowRight, Film, ShieldCheck, Zap } from 'lucide-react'
+import { anchor, sectionIds, siteLinks } from '@/config/site-links'
 import { ActionLink } from './shared/ActionLink'
-import { CheckItem } from './shared/CheckItem'
-import { IconTile } from './shared/IconTile'
+import { homeButton } from './shared/button-styles'
+import { Container } from './shared/Container'
 
 export function FinalCtaSection() {
   return (
-    <section aria-labelledby="cta-title" className="bg-page px-4 py-16 sm:px-6 lg:px-16 lg:py-24">
-      <div className="mx-auto flex max-w-[1152px] flex-col items-center rounded-2xl bg-white px-5 py-14 text-center shadow-xl sm:px-10 lg:py-24">
-        <IconTile icon={Clapperboard} size="lg" className="mb-4" />
-        <h2
-          id="cta-title"
-          className="mb-3 max-w-[760px] text-balance text-[34px] leading-[42px] font-semibold tracking-[-0.02em] text-ink sm:text-5xl sm:leading-[56px] lg:text-[56px] lg:leading-16"
-        >
-          Sẵn sàng đưa con chữ của bạn lên màn ảnh lớn?
+    <section aria-labelledby="cta-title" className="bg-linear-to-b from-white to-jade-50/80 py-20 lg:py-28">
+      <Container className="flex max-w-3xl flex-col items-center text-center">
+        <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-xl bg-jade-100 text-jade-600">
+          <Film className="size-6" />
+        </span>
+        <h2 id="cta-title" className="mt-6 text-[30px] leading-[1.2] font-bold tracking-[-0.02em] text-slate-900 sm:text-[38px]">
+          Sẵn sàng đưa con chữ của bạn <span className="block text-jade-500">lên màn ảnh lớn?</span>
         </h2>
-        <p className="mb-10 max-w-[576px] text-base leading-7 text-ink-muted sm:text-lg">
-          Tham gia cùng hơn 2.500 nhà văn, biên kịch và nhà sản xuất phim ngắn đang sáng tác mỗi ngày với
-          StoryToScene.
+        <p className="mt-4 max-w-xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+          Tham gia cùng hơn 4.200 tác giả, đạo diễn và nhà làm phim đang biến hàng nghìn trang truyện thành kịch bản phân
+          cảnh mỗi tuần.
         </p>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <ActionLink {...tryFreeLink} className={cn(buttonVariants({ variant: 'brand', size: 'cta-lg' }), 'sm:px-16')}>
-            Bắt đầu chuyển thể miễn phí
+        <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <ActionLink href={siteLinks.register} className={homeButton({ size: 'lg', className: 'sm:px-9' })}>
+            Bắt đầu chuyển thể miễn phí <ArrowRight aria-hidden="true" />
           </ActionLink>
-          <a href={anchor(sectionIds.demo)} className={buttonVariants({ variant: 'muted', size: 'cta-lg' })}>
-            Khám phá kho kịch bản
+          <a href={anchor(sectionIds.genres)} className={homeButton({ variant: 'outline', size: 'lg' })}>
+            Xem 8 preset thể loại
           </a>
         </div>
-        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <li>
-            <CheckItem icon={BadgeCheck}>Bản quyền 100% thuộc tác giả</CheckItem>
+        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs leading-4 text-slate-500">
+          <li className="flex items-center gap-1.5">
+            <ShieldCheck aria-hidden="true" className="size-3.5 text-jade-500" /> Bảo đảm 100% thuộc tác giả
           </li>
-          <li>
-            <CheckItem icon={Lock}>Bảo mật dữ liệu tuyệt đối</CheckItem>
+          <li aria-hidden="true" className="size-1 rounded-full bg-slate-300" />
+          <li className="flex items-center gap-1.5">
+            <Zap aria-hidden="true" className="size-3.5 text-jade-500" /> Tốc độ xử lý dưới 60 giây
           </li>
         </ul>
-      </div>
+      </Container>
     </section>
   )
 }

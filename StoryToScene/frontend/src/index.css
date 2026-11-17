@@ -6,25 +6,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Design tokens Homepage – lấy từ Figma StoryToScene (node 58:2488) */
+/*
+ * Design tokens Homepage – Figma StoryToScene (node 183:903).
+ * Thiết kế dùng thang `slate` mặc định của Tailwind cho chữ/nền/viền,
+ * cộng thêm màu xanh thương hiệu "jade" dưới đây.
+ */
 @theme {
-  --color-page: #faf9f6;
-  --color-surface: #f3efea;
-  --color-line: #e7e2da;
-  --color-ink: #111827;
-  --color-ink-muted: #645e57;
-  --color-nav: #57534e;
-  --color-brand: #39b536;
-  --color-brand-deep: #006e0d;
-  --color-brand-mid: #356a2e;
-  --color-brand-tint: #e9f0e1;
-  --color-peach: #fdf3ef;
-  --color-clay: #8b3e2f;
-  --color-berry: #ac2b59;
-
-  /* Glow của nút CTA (giữ nguyên giá trị Figma) */
-  --shadow-cta: 0 4px 7px rgb(174 42 8 / 0.35);
-  --shadow-cta-sm: 0 4px 7px rgb(217 72 38 / 0.3);
+  --color-jade-50: #e8f8f2;
+  --color-jade-100: #cdf0e2;
+  --color-jade-200: #a3e3cb;
+  --color-jade-500: #00b074;
+  --color-jade-600: #009865;
+  --color-jade-700: #007d54;
+  --color-jade-800: #036c45;
+  /* Nền khung terminal / kịch bản tối */
+  --color-night-900: #0f141c;
+  --color-night-800: #1a2230;
+  --color-night-700: #273244;
 }
 
 :root {
