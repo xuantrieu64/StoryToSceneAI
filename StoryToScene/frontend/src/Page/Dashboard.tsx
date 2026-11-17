@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { FormCreateStory } from '../Components/FormCreateStory/FormCreateStory'
-import { Sidebar } from '../Components/Sidebar/Sidebar'
+import { FormCreateStory } from '../features/Dashboard/FormCreateStory/FormCreateStory'
+import { Sidebar } from '../features/Dashboard/Sidebar/Sidebar'
 
 function Dashboard() {
   const [createFormOpen, setCreateFormOpen] = useState(false)
