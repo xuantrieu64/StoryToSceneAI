@@ -1,6 +1,7 @@
 import { Toaster } from '@/components/ui/sonner'
 import { Smoke } from '@/dev/Smoke'
 import { HomePage } from '@/features/home/HomePage'
+import Dashboard from './Page/Dashboard'
 
 /**
  * Trang kiểm thử stack (Smoke) vẫn được giữ lại, chỉ hiển thị khi chạy dev tại
