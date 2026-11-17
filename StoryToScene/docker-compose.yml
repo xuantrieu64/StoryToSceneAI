@@ -46,7 +46,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in the root .env}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD must be set in the root .env}
     ports:
-      - "${DB_FORWARD_PORT:-3306}:3306"
+      - "127.0.0.1:${DB_FORWARD_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
