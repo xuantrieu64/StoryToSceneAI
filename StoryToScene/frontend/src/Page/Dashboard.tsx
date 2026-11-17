@@ -1,10 +1,17 @@
 import { useState } from 'react'
+import { CardProject } from '../features/Dashboard/CardProject/CardProject'
 import { FormCreateStory } from '../features/Dashboard/FormCreateStory/FormCreateStory'
 import { Sidebar } from '../features/Dashboard/Sidebar/Sidebar'
 
+type Project = {
+  name: string
+  createdAtDateTime: string
+  createdAtLabel: string
+}
+
 function Dashboard() {
   const [createFormOpen, setCreateFormOpen] = useState(false)
-  const [projects, setProjects] = useState<string[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
 
   return (
     <div className="flex min-h-screen bg-[#f8f9fa] font-sans text-[#111827]">
@@ -62,13 +69,12 @@ function Dashboard() {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
               {projects.map((project, index) => (
-                <article className="rounded-xl border border-[#e5e7eb] bg-white p-5" key={`${project}-${index}`}>
-                  <div className="grid size-10 place-items-center rounded-lg bg-[#f3faf2] text-[#39b536]">
-                    <CalendarIcon />
-                  </div>
-                  <h2 className="mb-1 mt-3.5 text-[15px] font-bold text-[#111827]">{project}</h2>
-                  <p className="m-0 text-xs text-[#6b7280]">Dự án mới · Chưa có chương</p>
-                </article>
+                <CardProject
+                  createdAtDateTime={project.createdAtDateTime}
+                  createdAtLabel={project.createdAtLabel}
+                  key={`${project.name}-${index}`}
+                  title={project.name}
+                />
               ))}
             </div>
           )}
@@ -78,7 +84,15 @@ function Dashboard() {
         isOpen={createFormOpen}
         onClose={() => setCreateFormOpen(false)}
         onCreate={(projectName) => {
-          setProjects((current) => [...current, projectName])
+          const createdAt = new Date()
+          setProjects((current) => [
+            ...current,
+            {
+              name: projectName,
+              createdAtDateTime: createdAt.toISOString(),
+              createdAtLabel: createdAt.toLocaleDateString('vi-VN'),
+            },
+          ])
           setCreateFormOpen(false)
         }}
       />
