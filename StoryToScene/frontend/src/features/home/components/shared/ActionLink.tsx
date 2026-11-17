@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react'
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 type ActionLinkProps = Omit<ComponentProps<'a'>, 'href'> & {
@@ -11,12 +12,13 @@ type ActionLinkProps = Omit<ComponentProps<'a'>, 'href'> & {
 }
 
 const isExternal = (url: string) => /^https?:\/\//i.test(url)
+const isRoute = (url: string) => url.startsWith('/')
 
 /**
  * Link có hành vi trung thực:
- * - Có đích → render `<a>` (link ngoài tự mở tab mới).
- * - Chưa có đích → render phần tử `aria-disabled`, kèm nhãn "Sắp ra mắt",
- *   không điều hướng tới trang không tồn tại.
+ * - Route nội bộ ("/dashboard") → `<Link>` của react-router.
+ * - Anchor / URL ngoài → `<a>` (link ngoài mở tab mới).
+ * - Chưa có đích → phần tử `aria-disabled` kèm nhãn "Sắp ra mắt".
  */
 export function ActionLink({
   href,
@@ -24,22 +26,24 @@ export function ActionLink({
   unavailableLabel = 'Tính năng sắp ra mắt',
   className,
   children,
-  onClick,
   ...props
 }: ActionLinkProps) {
   const target = href ?? fallbackHref
 
   if (!target) {
     return (
-      <span
-        role="link"
-        aria-disabled="true"
-        title={unavailableLabel}
-        className={cn(className, 'cursor-not-allowed opacity-60')}
-      >
+      <span role="link" aria-disabled="true" title={unavailableLabel} className={cn(className, 'cursor-not-allowed opacity-60')}>
         {children}
         <span className="sr-only"> ({unavailableLabel})</span>
       </span>
+    )
+  }
+
+  if (isRoute(target)) {
+    return (
+      <Link to={target} className={className} {...props}>
+        {children}
+      </Link>
     )
   }
 
@@ -47,7 +51,6 @@ export function ActionLink({
     <a
       href={target}
       className={className}
-      onClick={onClick}
       {...(isExternal(target) && { target: '_blank', rel: 'noopener noreferrer' })}
       {...props}
     >

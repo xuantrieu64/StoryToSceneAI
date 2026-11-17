@@ -1,13 +1,11 @@
 /**
  * Đích đến của các trang / tích hợp nằm NGOÀI Homepage.
  *
- * Hiện backend chưa có route đăng nhập, đăng ký, Studio, thanh toán hay các
- * trang pháp lý, nên các giá trị dưới đây đang để `undefined`. Component
- * `ActionLink` sẽ hiển thị chúng ở trạng thái "Sắp ra mắt" (không bấm được)
- * thay vì tạo link chết hoặc chức năng giả.
+ * - Đường dẫn nội bộ (bắt đầu bằng "/") được điều hướng bằng react-router.
+ * - Giá trị `undefined` = trang/tích hợp chưa tồn tại: `ActionLink` hiển thị
+ *   trạng thái "Sắp ra mắt" (không bấm được) thay vì tạo link chết.
  *
- * Khi trang thật sẵn sàng, chỉ cần điền URL vào đây – toàn bộ nút/link liên
- * quan trên Homepage sẽ tự hoạt động.
+ * Khi trang thật sẵn sàng, chỉ cần điền URL vào đây.
  */
 export const siteLinks: Record<
   | 'login'
@@ -15,35 +13,48 @@ export const siteLinks: Record<
   | 'studio'
   | 'checkoutBasic'
   | 'checkoutPro'
-  | 'zaloSupport'
+  | 'blog'
+  | 'releaseNotes'
+  | 'docs'
   | 'community'
   | 'terms'
   | 'privacy'
-  | 'aiCopyright'
-  | 'contact',
+  | 'copyright'
+  | 'partnership'
+  | 'website'
+  | 'email'
+  | 'zalo',
   string | undefined
 > = {
-  login: undefined,
-  register: undefined,
-  studio: undefined,
+  login: '/login',
+  /** Trang đăng ký – các nút "Bắt đầu miễn phí" / "Dùng thử miễn phí" trên trang chủ. */
+  register: '/register',
+  studio: '/dashboard',
   checkoutBasic: undefined,
   checkoutPro: undefined,
-  zaloSupport: undefined,
+  blog: undefined,
+  releaseNotes: undefined,
+  docs: undefined,
   community: undefined,
   terms: undefined,
   privacy: undefined,
-  aiCopyright: undefined,
-  contact: undefined,
+  copyright: undefined,
+  partnership: undefined,
+  website: undefined,
+  email: undefined,
+  zalo: undefined,
 }
 
 /** Anchor của các section trên Homepage. */
 export const sectionIds = {
-  hero: 'top',
+  top: 'top',
   genres: 'the-loai',
-  demo: 'kich-ban-mau',
-  howItWorks: 'cach-hoat-dong',
+  pipeline: 'cach-hoat-dong',
+  steps: 'quy-trinh',
   pricing: 'bang-gia',
+  testimonials: 'danh-gia',
   faq: 'hoi-dap',
+  blog: 'goc-dien-anh',
 } as const
 
 export const anchor = (id: string) => `#${id}`
