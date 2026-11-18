@@ -1,7 +1,32 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { siteLinks } from '@/config/site-links'
 
 type SidebarProps = {
-  activeItem?: 'projects' | 'tasks'
+  /** null = không mục nào đang chọn (vd. trang Nâng cấp gói). */
+  activeItem?: 'projects' | 'tasks' | null
+  /** Mở bảng Hướng dẫn. */
+  onOpenGuide?: () => void
+  guideOpen?: boolean
+  /** Dự án đang mở (màn hình Tổng quan / các công đoạn). Không truyền = không hiển thị khối "Đang mở". */
+  openProject?: OpenProjectNav
+}
+
+export type OpenProjectNavItem = {
+  key: string
+  label: string
+  /** Số thứ tự công đoạn; không có = mục "Tổng quan". */
+  number?: number
+  status?: string
+  /** Route; không có = công đoạn chưa triển khai (không bấm được). */
+  href?: string
+  active?: boolean
+}
+
+export type OpenProjectNav = {
+  name: string
+  cover: string | null
+  items: OpenProjectNavItem[]
 }
 
 type NavigationItemProps = {
@@ -9,25 +34,106 @@ type NavigationItemProps = {
   collapsed?: boolean
   icon: 'folder' | 'list'
   label: string
+  /** Route đích; không có thì hiển thị dạng nút. */
+  to?: string
 }
 
-function NavigationItem({ active = false, collapsed = false, icon, label }: NavigationItemProps) {
-  return (
-    <button
-      aria-current={active ? 'page' : undefined}
-      className={`flex min-h-10 w-full items-center rounded-lg px-[14px] py-2.5 text-left text-[13.5px] transition-colors ${active
-        ? 'bg-[#eaf7e9] text-[#39b536]'
-        : 'text-[#4b5563] hover:bg-gray-50'
-        }`}
-      type="button"
-    >
+function NavigationItem({ active = false, collapsed = false, icon, label, to }: NavigationItemProps) {
+  const className = `flex min-h-10 w-full items-center rounded-lg px-[14px] py-2.5 text-left text-[13.5px] transition-colors ${active
+    ? 'bg-[#eaf7e9] text-[#39b536]'
+    : 'text-[#4b5563] hover:bg-gray-50'
+    }`
+  const content = (
+    <>
       {icon === 'folder' ? <FolderIcon /> : <ListIcon />}
       <span className={`truncate pl-3 ${collapsed ? 'hidden' : 'max-[760px]:hidden'}`}>{label}</span>
+    </>
+  )
+
+  if (to) {
+    return (
+      <Link aria-current={active ? 'page' : undefined} aria-label={label} className={className} to={to}>
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <button aria-current={active ? 'page' : undefined} className={className} type="button">
+      {content}
     </button>
   )
 }
 
-export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
+function OpenProjectSection({ collapsed, project }: { collapsed: boolean; project: OpenProjectNav }) {
+  const hideText = collapsed ? 'hidden' : 'max-[760px]:hidden'
+
+  return (
+    <nav aria-label={`Dự án đang mở: ${project.name}`} className="mt-5 grid gap-0.5">
+      <p className={`mb-1 mt-0 px-[14px] text-[10.5px] font-semibold uppercase tracking-[0.6px] text-[#9ca3af] ${hideText}`}>
+        Đang mở
+      </p>
+      <div className={`mb-1.5 flex items-center gap-2 px-[14px] ${collapsed ? 'justify-center px-0' : 'max-[760px]:justify-center max-[760px]:px-0'}`}>
+        <span className="relative size-6 shrink-0 overflow-hidden rounded-md bg-[#eaf7e9]">
+          {project.cover ? (
+            <img alt="" className="absolute inset-0 size-full object-cover" src={project.cover} />
+          ) : (
+            <span className="absolute inset-0 grid place-items-center [&_svg]:size-4">
+              <BrandIcon />
+            </span>
+          )}
+        </span>
+        <strong className={`truncate text-[13px] leading-5 text-[#111827] ${hideText}`} title={project.name}>
+          {project.name}
+        </strong>
+      </div>
+
+      {project.items.map((item) => {
+        const className = `flex min-h-9 w-full items-center gap-2.5 rounded-lg px-[14px] py-2 text-left text-[13.5px] transition-colors ${
+          collapsed ? 'justify-center px-0' : 'max-[760px]:justify-center max-[760px]:px-0'
+        } ${
+          item.active
+            ? 'bg-[#eaf7e9] font-semibold text-[#39b536]'
+            : item.href
+              ? 'text-[#4b5563] hover:bg-gray-50'
+              : 'cursor-default text-[#6b7280]'
+        }`
+        const content = (
+          <>
+            {item.number === undefined ? (
+              <OverviewIcon />
+            ) : (
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-md text-[11px] font-semibold ${
+                  item.active ? 'bg-[#39b536] text-white' : 'bg-[#f3f4f6] text-[#6b7280]'
+                }`}
+              >
+                {item.number}
+              </span>
+            )}
+            <span className={`min-w-0 flex-1 truncate ${hideText}`}>{item.label}</span>
+            {item.status && (
+              <span className={`max-w-[72px] shrink-0 truncate text-[11px] font-normal text-[#9ca3af] ${hideText}`}>{item.status}</span>
+            )}
+          </>
+        )
+        const label = item.status ? `${item.label} – ${item.status}` : item.label
+
+        return item.href ? (
+          <Link aria-current={item.active ? 'page' : undefined} aria-label={label} className={className} key={item.key} to={item.href}>
+            {content}
+          </Link>
+        ) : (
+          <span aria-disabled="true" aria-label={`${label} (sắp ra mắt)`} className={className} key={item.key} title="Sắp ra mắt">
+            {content}
+          </span>
+        )
+      })}
+    </nav>
+  )
+}
+
+export function Sidebar({ activeItem = 'projects', onOpenGuide, guideOpen = false, openProject }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const toggleButton = (
     <button
@@ -70,14 +176,20 @@ export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
           {/* Thu gọn: nút nằm trên icon "Dự án của tôi" */}
           {collapsed && <div className="mb-1 flex justify-center max-[760px]:hidden">{toggleButton}</div>}
 
-          <NavigationItem active={activeItem === 'projects'} collapsed={collapsed} icon="folder" label="Dự án của tôi" />
+          <NavigationItem active={activeItem === 'projects'} collapsed={collapsed} icon="folder" label="Dự án của tôi" to={siteLinks.studio} />
           <NavigationItem active={activeItem === 'tasks'} collapsed={collapsed} icon="list" label="Danh sách việc" />
         </nav>
+
+        {openProject && <OpenProjectSection collapsed={collapsed} project={openProject} />}
       </div>
 
       <div className="border-t border-[#f3f4f6] px-3 pb-3 pt-[13px] max-[760px]:px-2">
         <button
+          aria-expanded={guideOpen}
+          aria-haspopup="dialog"
+          aria-label="Hướng dẫn"
           className="flex h-8 w-full items-center gap-[9px] rounded-lg px-1.5 text-left text-[13px] text-[#374151] hover:bg-gray-50"
+          onClick={onOpenGuide}
           type="button"
         >
           <span className="grid size-5 shrink-0 place-items-center rounded-full border border-[#9ca3af] text-[#6b7280]">
@@ -89,7 +201,9 @@ export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
         <div className={`mt-2 rounded-xl border border-[#b9e3b6] bg-[#f3faf2] p-3 ${collapsed ? 'hidden' : 'max-[760px]:hidden'}`}>
           <div className="flex items-center justify-between text-xs leading-4 text-[#111827]">
             <span>Gói Miễn phí</span>
-            <button className="font-bold text-[#39b536]" type="button">Nâng gói</button>
+            <Link className="font-bold text-[#39b536] hover:underline" to={siteLinks.upgrade ?? '/upgrade'}>
+              Nâng gói
+            </Link>
           </div>
           <p className="mb-0 mt-0.5 text-[11px] leading-5 text-[#6b7280]">
             Hôm nay <span className="text-[#39b536]">0/10</span> lượt AI
@@ -114,7 +228,7 @@ export function Sidebar({ activeItem = 'projects' }: SidebarProps) {
   )
 }
 
-function BrandIcon() {
+export function BrandIcon() {
   return (
     <svg aria-hidden="true" className="size-6 shrink-0" fill="none" viewBox="0 0 24 24">
       <path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8H4Z" fill="#EAF7E9" stroke="#39B536" strokeWidth="2" />
@@ -139,6 +253,15 @@ function ListIcon() {
       <circle cx="4.5" cy="6" r="1" fill="currentColor" />
       <circle cx="4.5" cy="12" r="1" fill="currentColor" />
       <circle cx="4.5" cy="18" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+function OverviewIcon() {
+  return (
+    <svg aria-hidden="true" className="size-5 shrink-0" fill="none" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 9h8M8 12.5h8M8 16h5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
     </svg>
   )
 }
