@@ -1,15 +1,24 @@
 import { useEffect, useId, useState } from 'react'
 import { ArrowRight, Menu, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { anchor, sectionIds, siteLinks } from '@/config/site-links'
 import { cn } from '@/lib/utils'
-import { mainNav } from '../data/home-content'
+import { mainNav, type NavItem } from '../data/home-content'
 import { LanguageToggle } from './LanguageToggle'
 import { ActionLink } from './shared/ActionLink'
 import { homeButton } from './shared/button-styles'
 import { Logo } from './shared/Logo'
 import { Container } from './shared/Container'
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  /**
+   * Trang đang hiển thị header. Ở trang chủ, link section là anchor trong trang (#...);
+   * ở trang khác, link trỏ về trang chủ (/#...). Mục tương ứng được đánh dấu đang chọn.
+   */
+  page?: 'home' | 'tutorials'
+}
+
+export function SiteHeader({ page = 'home' }: SiteHeaderProps) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
 
@@ -28,22 +37,49 @@ export function SiteHeader() {
   }, [open])
 
   const close = () => setOpen(false)
-  const navLink = 'text-sm leading-5 font-medium text-slate-600 transition-colors hover:text-slate-900'
+  const navLink = 'text-sm leading-5 font-medium whitespace-nowrap text-slate-600 transition-colors hover:text-slate-900'
+  const isHome = page === 'home'
+
+  /** Link menu: route nội bộ dùng react-router, anchor section dùng thẻ <a>. */
+  const renderNavLink = (item: NavItem, className: string, onClick?: () => void) => {
+    const href = item.href ?? ''
+    if (href.startsWith('/')) {
+      const active = item.page === page
+      return (
+        <Link to={href} onClick={onClick} aria-current={active ? 'page' : undefined} className={cn(className, active && 'font-semibold text-jade-700 hover:text-jade-700')}>
+          {item.label}
+        </Link>
+      )
+    }
+    return (
+      <a href={isHome ? href : `/${href}`} onClick={onClick} className={className}>
+        {item.label}
+      </a>
+    )
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur-md">
       <Container className="flex h-[72px] items-center justify-between gap-4">
-        <a href={anchor(sectionIds.top)} aria-label="StoryToScene – về đầu trang" className="rounded-lg">
-          <Logo />
-        </a>
+        {isHome ? (
+          <a href={anchor(sectionIds.top)} aria-label="StoryToScene – về đầu trang" className="rounded-lg">
+            <Logo />
+          </a>
+        ) : (
+          <Link to="/" aria-label="StoryToScene – trang chủ" className="rounded-lg">
+            <Logo />
+          </Link>
+        )}
 
         <nav aria-label="Điều hướng chính" className="hidden xl:block">
           <ul className="flex items-center gap-8">
             {mainNav.map((item) => (
               <li key={item.label}>
-                <a href={item.href} className={navLink}>
-                  {item.label}
-                </a>
+                {renderNavLink(
+                  item,
+                  // Mục đang chọn: gạch chân xanh sát mép dưới header
+                  cn(navLink, item.page === page && "relative after:absolute after:inset-x-0 after:-bottom-[26px] after:h-0.5 after:rounded-full after:bg-jade-500 after:content-['']"),
+                )}
               </li>
             ))}
           </ul>
@@ -83,11 +119,7 @@ export function SiteHeader() {
           <nav aria-label="Điều hướng (thu gọn)">
             <ul className="flex flex-col py-2">
               {mainNav.map((item) => (
-                <li key={item.label}>
-                  <a href={item.href} onClick={close} className={cn(navLink, 'block rounded-lg px-2 py-3 hover:bg-slate-50')}>
-                    {item.label}
-                  </a>
-                </li>
+                <li key={item.label}>{renderNavLink(item, cn(navLink, 'block rounded-lg px-2 py-3 hover:bg-slate-50'), close)}</li>
               ))}
             </ul>
           </nav>

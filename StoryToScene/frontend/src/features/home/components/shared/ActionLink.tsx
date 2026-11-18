@@ -12,7 +12,8 @@ type ActionLinkProps = Omit<ComponentProps<'a'>, 'href'> & {
 }
 
 const isExternal = (url: string) => /^https?:\/\//i.test(url)
-const isRoute = (url: string) => url.startsWith('/')
+/** Route nội bộ (không gồm link về section trang chủ dạng "/#id" – cần <a> để trình duyệt cuộn tới). */
+const isRoute = (url: string) => url.startsWith('/') && !url.includes('#')
 
 /**
  * Link có hành vi trung thực:

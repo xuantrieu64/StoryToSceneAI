@@ -16,6 +16,8 @@ export const siteLinks: Record<
   | 'blog'
   | 'releaseNotes'
   | 'docs'
+  | 'tutorials'
+  | 'upgrade'
   | 'community'
   | 'terms'
   | 'privacy'
@@ -34,7 +36,11 @@ export const siteLinks: Record<
   checkoutPro: undefined,
   blog: undefined,
   releaseNotes: undefined,
-  docs: undefined,
+  /** Trang Hướng dẫn sử dụng (video) */
+  tutorials: '/tutorials',
+  docs: '/tutorials',
+  /** Trang Nâng cấp gói (nút "Nâng gói" ở Sidebar Dashboard) */
+  upgrade: '/upgrade',
   community: undefined,
   terms: undefined,
   privacy: undefined,

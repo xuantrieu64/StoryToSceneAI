@@ -19,14 +19,16 @@ export const images = { terminalStill }
 
 /* ------------------------------ Điều hướng ------------------------------ */
 
-export type NavItem = { label: string; href?: string }
+/** `page`: trang mà mục menu này đại diện (để đánh dấu đang chọn). */
+export type NavItem = { label: string; href?: string; page?: 'tutorials' }
 
+/** Menu chính (theo thiết kế trang Hướng dẫn). Section "Quy trình sản xuất" không còn trong menu, vẫn nằm trên trang chủ. */
 export const mainNav: NavItem[] = [
   { label: 'Cách hoạt động', href: anchor(sectionIds.pipeline) },
-  { label: 'Thể loại truyện', href: anchor(sectionIds.genres) },
-  { label: 'Quy trình sản xuất', href: anchor(sectionIds.steps) },
+  { label: 'Thể loại', href: anchor(sectionIds.genres) },
   { label: 'Bảng giá', href: anchor(sectionIds.pricing) },
-  { label: 'Hỏi đáp', href: anchor(sectionIds.faq) },
+  { label: 'FAQ', href: anchor(sectionIds.faq) },
+  { label: 'Hướng dẫn', href: siteLinks.tutorials, page: 'tutorials' },
 ]
 
 /* ------------------------- Thanh "phân cảnh hôm nay" ------------------------- */
