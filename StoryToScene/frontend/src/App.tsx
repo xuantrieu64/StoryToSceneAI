@@ -8,6 +8,11 @@ import Tutorials from './Page/Tutorials'
 import Upgrade from './Page/Upgrade'
 import ProjectOverview from './Page/ProjectOverview'
 import ProjectStory from './Page/ProjectStory'
+import ScriptAssistant from './Page/ScriptAssistant'
+import ProjectScripts from './Page/ProjectScripts'
+import ScriptEditorPage from './Page/ScriptEditorPage'
+import ProjectCharacters from './Page/ProjectCharacters'
+import CharacterDetailPage from './Page/CharacterDetailPage'
 import { Smoke } from '@/dev/Smoke'
 
 function App() {
@@ -35,6 +40,11 @@ function App() {
         <Route path="/upgrade" element={<Upgrade />} />
         <Route path="/projects/:projectId" element={<ProjectOverview />} />
         <Route path="/projects/:projectId/story" element={<ProjectStory />} />
+        <Route path="/projects/:projectId/script-assistant" element={<ScriptAssistant />} />
+        <Route path="/projects/:projectId/scripts" element={<ProjectScripts />} />
+        <Route path="/projects/:projectId/scripts/:scriptId" element={<ScriptEditorPage />} />
+        <Route path="/projects/:projectId/characters" element={<ProjectCharacters />} />
+        <Route path="/projects/:projectId/characters/:characterId" element={<CharacterDetailPage />} />
       </Routes>
 
       <Toaster position="top-right" />

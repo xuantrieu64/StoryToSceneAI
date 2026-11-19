@@ -1,10 +1,11 @@
 /*
  * 8 công đoạn sản xuất của một dự án (màn hình Tổng quan & Sidebar).
- * Hiện mới có màn hình Truyện (`path`); các công đoạn khác chưa triển khai
+ * Hiện mới có màn hình Truyện, Trợ lý kịch bản, Kịch bản và Nhân vật (`path`); các công đoạn khác chưa triển khai
  * nên không có đường dẫn và hiển thị ở trạng thái chờ.
  */
 import { projectPaths } from '@/features/Dashboard/lib/project-display'
 import type { Project } from '@/features/Dashboard/types/project'
+import { isApproved, loadCharacters } from '@/features/characters/lib/character-storage'
 
 export type StageId = 'story' | 'scriptAssistant' | 'script' | 'characters' | 'storyboard' | 'frames' | 'voice' | 'video'
 
@@ -48,6 +49,7 @@ export const stages: Stage[] = [
     description: 'Trò chuyện để chuyển chương thành tập kịch bản.',
     status: () => 'Chưa bắt đầu',
     isDone: never,
+    path: projectPaths.scriptAssistant,
     next: { title: 'Chuyển chương thành kịch bản', description: 'Trò chuyện với trợ lý để chuyển chương truyện thành tập kịch bản.', cta: 'Mở Trợ lý kịch bản' },
   },
   {
@@ -57,6 +59,7 @@ export const stages: Stage[] = [
     description: 'Xem và sửa từng tập kịch bản.',
     status: (p) => (p.scriptCount > 0 ? `${p.scriptCount} kịch bản` : 'Chưa có'),
     isDone: (p) => p.scriptCount > 0,
+    path: projectPaths.scripts,
     next: { title: 'Hoàn thiện kịch bản', description: 'Xem và sửa từng tập kịch bản.', cta: 'Mở Kịch bản' },
   },
   {
@@ -64,8 +67,15 @@ export const stages: Stage[] = [
     number: 4,
     title: 'Nhân vật',
     description: 'Tạo ảnh mẫu, duyệt và khóa ngoại hình.',
-    status: notStarted,
-    isDone: never,
+    status: (p) => {
+      const list = loadCharacters(p.id).filter((character) => character.kind === 'character')
+      return list.length > 0 ? `${list.filter((character) => isApproved(character)).length}/${list.length} đã duyệt` : 'Chưa có'
+    },
+    isDone: (p) => {
+      const list = loadCharacters(p.id).filter((character) => character.kind === 'character')
+      return list.length > 0 && list.every((character) => isApproved(character))
+    },
+    path: projectPaths.characters,
     next: { title: 'Tạo nhân vật', description: 'Tạo ảnh mẫu, duyệt và khóa ngoại hình nhân vật.', cta: 'Mở Nhân vật' },
   },
   {

@@ -21,4 +21,9 @@ export const formatProjectDate = (iso: string) => new Date(iso).toLocaleDateStri
 export const projectPaths = {
   overview: (projectId: string) => `/projects/${encodeURIComponent(projectId)}`,
   story: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/story`,
+  scriptAssistant: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/script-assistant`,
+  scripts: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/scripts`,
+  characters: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/characters`,
+  characterDetail: (projectId: string, characterId: string) => `/projects/${encodeURIComponent(projectId)}/characters/${encodeURIComponent(characterId)}`,
+  scriptEditor: (projectId: string, scriptId: string) => `/projects/${encodeURIComponent(projectId)}/scripts/${encodeURIComponent(scriptId)}`,
 }
