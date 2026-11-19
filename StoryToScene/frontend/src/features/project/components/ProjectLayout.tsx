@@ -13,14 +13,31 @@ type ProjectLayoutProps = {
   projectId: string | undefined
   active: 'overview' | StageId
   title: string
+  /** Dòng phụ dưới tiêu đề (vd. "0 nhân vật · 0 đã duyệt"). Không truyền = tiêu đề như cũ. */
+  subtitle?: (project: Project) => ReactNode
+  /** Cụm điều khiển nằm cùng hàng, bên phải tiêu đề (xuống dòng trên màn hình hẹp). */
+  actions?: (project: Project) => ReactNode
   /** `reloadProject`: đọc lại dự án đã lưu sau khi màn hình con thay đổi dữ liệu. */
   children: (project: Project, actions: { reloadProject: () => void }) => ReactNode
 }
 
 const dashboardPath = siteLinks.studio ?? '/dashboard'
 
+/*
+ * ── Quy tắc spacing DUY NHẤT của khu vực dự án ───────────────────────────────
+ * Nội dung luôn bắt đầu ngay sau Sidebar với một khoảng cách cố định; không giới hạn max-width,
+ * không căn giữa → khoảng cách không phụ thuộc trang đang mở, bề rộng màn hình hay Sidebar đang
+ * rộng/hẹp/thu gọn (main là flex-1 nên tự co giãn và dịch theo mép Sidebar).
+ * Breadcrumb, tiêu đề và nội dung các trang con nằm chung một cột nên cùng một lề trái.
+ * Trang con KHÔNG tự thêm margin/padding ngoài – chỉ xếp nội dung bên trong cột này.
+ *   Lề trái (Sidebar → nội dung): 16px · <760px: 12px
+ *   Lề phải: 40px · ≤1000px: 28px · <760px: 20px
+ *   Lề trên: 28px · <760px: 20px; lề dưới: 40px
+ */
+const PROJECT_PAGE_SPACING = 'pl-4 pr-10 pb-10 pt-7 max-[1000px]:pr-7 max-[760px]:pl-3 max-[760px]:pr-5 max-[760px]:pt-5'
+
 /** Khung chung cho các màn hình của một dự án: Sidebar (khối "Đang mở"), breadcrumb, tiêu đề. */
-export function ProjectLayout({ projectId, active, title, children }: ProjectLayoutProps) {
+export function ProjectLayout({ projectId, active, title, subtitle, actions, children }: ProjectLayoutProps) {
   const [guideOpen, setGuideOpen] = useState(false)
   // `version` tăng khi màn hình con báo dữ liệu đổi → render lại và đọc dự án mới nhất.
   const [, setVersion] = useState(0)
@@ -49,8 +66,8 @@ export function ProjectLayout({ projectId, active, title, children }: ProjectLay
     <div className="flex min-h-screen bg-[#f8f9fa] font-sans text-[#111827]">
       <Sidebar activeItem={null} guideOpen={guideOpen} onOpenGuide={() => setGuideOpen(true)} openProject={openProject} />
 
-      <main className="min-w-0 flex-1 px-10 pb-10 pt-7 max-[1000px]:px-7 max-[760px]:px-5 max-[760px]:pt-5">
-        <div className="mx-auto max-w-[1180px]">
+      <main className={`min-w-0 flex-1 ${PROJECT_PAGE_SPACING}`}>
+        <div className="w-full min-w-0">
           {project ? (
             <>
               <nav aria-label="Breadcrumb" className="text-xs leading-5 text-[#6b7280]">
@@ -80,7 +97,17 @@ export function ProjectLayout({ projectId, active, title, children }: ProjectLay
                   )}
                 </ol>
               </nav>
-              <h1 className="mb-5 mt-1.5 text-2xl font-bold leading-8 tracking-[-0.6px] text-[#111827] max-[760px]:text-[22px]">{title}</h1>
+              {subtitle || actions ? (
+                <div className="mb-5 mt-1.5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <div className="min-w-0">
+                    <h1 className="m-0 text-2xl font-bold leading-8 tracking-[-0.6px] text-[#111827] max-[760px]:text-[22px]">{title}</h1>
+                    {subtitle && <p className="mb-0 mt-0.5 text-xs leading-5 text-[#6b7280]">{subtitle(project)}</p>}
+                  </div>
+                  {actions && <div className="flex min-w-0 flex-wrap items-center gap-2.5">{actions(project)}</div>}
+                </div>
+              ) : (
+                <h1 className="mb-5 mt-1.5 text-2xl font-bold leading-8 tracking-[-0.6px] text-[#111827] max-[760px]:text-[22px]">{title}</h1>
+              )}
               {children(project, { reloadProject: () => setVersion((value) => value + 1) })}
             </>
           ) : (
