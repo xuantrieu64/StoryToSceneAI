@@ -3,7 +3,6 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,7 +12,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -28,31 +27,32 @@ class User extends Authenticatable
         'two_factor_confirmed_at',
         'last_login_at',
         'last_login_ip',
-        'password_changed_at'
+        'password_changed_at',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
         'two_factor_secret',
-        'two_factor_recovery_codes'
+        'two_factor_recovery_codes',
     ];
-    
+
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'two_factor_secret' => 'encrypted',
         'two_factor_confirmed_at' => 'datetime',
         'last_login_at' => 'datetime',
         'password_changed_at' => 'datetime',
-        'password' => 'hashed'
+        'password' => 'hashed',
     ];
 
-    public function creditWallet() : HasOne 
+    public function creditWallet(): HasOne
     {
-        return $this->hasOne(CreditWallet::class, 'user_id');
+        return $this->hasOne(CreditWallet::class);
     }
 
-    public function hasTwoFactorEnalbled(): bool
+    public function hasTwoFactorEnabled(): bool
     {
-        return !is_null($this->two_factor_secret) && !is_null($this->two_factor_confirmed_at);
+        return ! is_null($this->two_factor_secret) && ! is_null($this->two_factor_confirmed_at);
     }
 }

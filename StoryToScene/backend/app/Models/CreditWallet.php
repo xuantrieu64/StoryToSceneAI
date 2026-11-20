@@ -10,8 +10,6 @@ class CreditWallet extends Model
 {
     use HasFactory;
 
-    public $timestamp = false;
-
     protected $fillable = [
         'user_id',
         'balance_available',

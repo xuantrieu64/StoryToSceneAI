@@ -20,7 +20,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'avatar_url' => $this->avatar_url,
             'role' => $this->role,
-            'two_factor_enabled' => $this->two_factor_enabled,
+            'two_factor_enabled' => $this->hasTwoFactorEnabled(),
             'wallet' => new CreditWalletResource($this->whenLoaded('creditWallet')),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
