@@ -2,101 +2,330 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendOtpMailJob;
+use App\Models\RefreshToken;
 use App\Models\User;
-use App\Services\UserService;
+use App\Services\Auth\TokenService;
+use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use PragmaRX\Google2FALaravel\Facade as Google2FA;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class AuthManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_creates_a_user_wallet_and_access_token(): void
+    private const JWT_SECRET = '0123456789abcdef0123456789abcdef';
+
+    protected function setUp(): void
     {
-        $response = $this->postJson('/api/v1/auth/register', [
-            'name' => 'Test User',
-            'email' => 'auth@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-        ]);
+        parent::setUp();
 
-        $response->assertCreated()
-            ->assertJsonPath('data.user.two_factor_enabled', false)
-            ->assertJsonPath('data.user.wallet.balance_available', 0)
-            ->assertJsonPath('data.user.wallet.balance_held', 0)
-            ->assertJsonPath('data.token_type', 'Bearer');
-
-        $this->assertDatabaseHas('users', ['email' => 'auth@example.com']);
-        $this->assertDatabaseHas('credit_wallets', [
-            'user_id' => User::where('email', 'auth@example.com')->value('id'),
-            'balance_available' => 0,
-            'balance_held' => 0,
-        ]);
-        $this->assertDatabaseHas('personal_access_tokens', [
-            'name' => 'auth_token',
+        config([
+            'auth_tokens.jwt_secret' => self::JWT_SECRET,
+            'cors.allowed_origins' => ['https://spa.example.test'],
         ]);
     }
 
-    public function test_logout_handles_a_user_without_a_current_access_token(): void
+    public function test_register_verify_email_creates_wallet_and_returns_access_token_cookie_only(): void
     {
-        $this->expectNotToPerformAssertions();
+        Queue::fake();
 
-        app(UserService::class)->logout(new User);
-    }
+        $this->postJson('/api/v1/auth/register', $this->registrationData('new@example.com'))
+            ->assertAccepted()
+            ->assertJsonPath('email', 'new@example.com')
+            ->assertJsonMissingPath('access_token');
 
-    public function test_wallet_backfill_creates_a_zero_balance_wallet_for_existing_users(): void
-    {
-        $user = User::factory()->create();
-        $migration = require database_path('migrations/2026_11_20_070001_backfill_credit_wallets.php');
-
-        $migration->up();
-
-        $this->assertDatabaseHas('credit_wallets', [
-            'user_id' => $user->id,
-            'balance_available' => 0,
-            'balance_held' => 0,
+        $otp = $this->queuedOtp();
+        $response = $this->postJson('/api/v1/auth/verify-email', [
+            'email' => 'new@example.com',
+            'otp' => $otp,
         ]);
-    }
 
-    public function test_two_factor_is_only_enabled_after_a_valid_otp_and_secret_is_encrypted(): void
-    {
-        $user = User::factory()->create();
-        $token = $user->createToken('auth_test')->plainTextToken;
+        $response->assertOk()
+            ->assertCookie('refresh_token')
+            ->assertJsonStructure(['access_token', 'expires_in', 'user' => ['id', 'email', 'wallet']]);
+        $this->assertSame(['access_token', 'expires_in', 'user'], array_keys($response->json()));
+        $this->assertArrayNotHasKey('refresh_token', $response->json());
+        $this->assertArrayNotHasKey('google_id', $response->json('user'));
+        $this->assertArrayNotHasKey('last_login_ip', $response->json('user'));
+        $this->assertArrayNotHasKey('two_factor_recovery_codes', $response->json('user'));
 
-        $setup = $this->withToken($token)->postJson('/api/v1/auth/2fa/enable');
-        $setup->assertOk();
+        $user = User::query()->where('email', 'new@example.com')->firstOrFail();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertSame(0, $user->creditWallet->balance_available);
+        $this->assertSame(0, $user->creditWallet->balance_held);
 
-        $secret = $setup->json('data.secret');
-        $this->assertIsString($secret);
-        $this->assertNotSame(
-            $secret,
-            DB::table('users')->where('id', $user->id)->value('two_factor_secret')
+        $plainRefresh = $this->cookieValue($response);
+        $this->assertSame(
+            hash('sha256', $plainRefresh),
+            RefreshToken::query()->where('user_id', $user->getKey())->value('token_hash'),
         );
-        $this->assertFalse($user->fresh()->hasTwoFactorEnabled());
+        $this->assertNotSame($plainRefresh, RefreshToken::query()->value('token_hash'));
+    }
 
-        $this->postJson('/api/v1/auth/2fa/verify', [
-            'code' => Google2FA::getCurrentOtp($secret),
+    public function test_re_registering_unverified_email_updates_user_and_resends_otp(): void
+    {
+        Queue::fake();
+
+        $this->postJson('/api/v1/auth/register', $this->registrationData('pending@example.com'))
+            ->assertAccepted();
+
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/auth/register', $this->registrationData(
+            'pending@example.com',
+            'Updated Name',
+            'UpdatedStrong456!',
+        ))->assertAccepted();
+
+        $user = User::query()->where('email', 'pending@example.com')->firstOrFail();
+        $this->assertSame('Updated Name', $user->name);
+        $this->assertTrue(Hash::check('UpdatedStrong456!', $user->password));
+        $this->assertNull($user->email_verified_at);
+        $this->assertSame(1, User::query()->where('email', 'pending@example.com')->count());
+        $this->assertSame(2, Queue::pushed(SendOtpMailJob::class)->count());
+
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/auth/resend-otp', [
+            'email' => 'pending@example.com',
+            'purpose' => 'register',
+        ])->assertAccepted();
+
+        $this->postJson('/api/v1/auth/resend-otp', [
+            'email' => 'pending@example.com',
+            'purpose' => 'disable_2fa',
+        ])->assertUnprocessable();
+    }
+
+    public function test_verified_email_is_rejected_but_soft_deleted_email_can_register_again(): void
+    {
+        User::factory()->create(['email' => 'verified@example.com']);
+
+        $this->postJson('/api/v1/auth/register', $this->registrationData('verified@example.com'))
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'validation_error')
+            ->assertJsonPath('message', 'Dữ liệu gửi lên không hợp lệ.');
+
+        Queue::fake();
+        $deleted = User::factory()->create(['email' => 'deleted@example.com']);
+        $deleted->delete();
+
+        $this->postJson('/api/v1/auth/register', $this->registrationData('deleted@example.com'))
+            ->assertAccepted();
+
+        $this->assertSame(1, User::query()->where('email', 'deleted@example.com')->count());
+        $this->assertSame(2, User::withTrashed()->where('email', 'deleted@example.com')->count());
+    }
+
+    public function test_login_errors_are_generic_for_invalid_password_and_unverified_user(): void
+    {
+        $user = User::factory()->create(['email' => 'valid@example.com']);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'incorrect',
+        ])->assertUnauthorized()
+            ->assertJsonPath('code', 'invalid_credentials')
+            ->assertJsonPath('message', 'Email hoặc mật khẩu không chính xác.');
+
+        $googleUser = User::factory()->create(['email' => 'google-only@example.com']);
+        $googleUser->forceFill(['password' => null])->save();
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $googleUser->email,
+            'password' => 'incorrect',
+        ])->assertUnauthorized()
+            ->assertJsonPath('code', 'invalid_credentials')
+            ->assertJsonPath('message', 'Email hoặc mật khẩu không chính xác.');
+
+        $unverified = User::factory()->unverified()->create(['email' => 'unverified@example.com']);
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $unverified->email,
+            'password' => 'password',
+        ])->assertForbidden()
+            ->assertJsonPath('code', 'email_unverified');
+    }
+
+    public function test_successful_login_returns_access_token_and_http_only_refresh_cookie(): void
+    {
+        $user = User::factory()->create(['email' => 'login@example.com']);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertOk()
+            ->assertCookie('refresh_token')
+            ->assertJsonStructure(['access_token', 'expires_in', 'user' => ['id', 'email']]);
+        $this->assertSame(['access_token', 'expires_in', 'user'], array_keys($response->json()));
+        $this->assertArrayNotHasKey('refresh_token', $response->json());
+        $this->assertTrue($response->getCookie('refresh_token', false)->isHttpOnly());
+    }
+
+    public function test_login_route_throttles_five_attempts_per_email_and_ip(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'throttle@example.com',
+                'password' => 'incorrect',
+            ])->assertUnauthorized();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'throttle@example.com',
+            'password' => 'incorrect',
+        ])->assertTooManyRequests()
+            ->assertJsonPath('code', 'too_many_requests');
+    }
+
+    public function test_refresh_rotates_cookie_and_logout_revokes_the_refresh_family(): void
+    {
+        $user = User::factory()->create(['email' => 'refresh@example.com']);
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
         ])->assertOk();
+        $initialRefresh = $this->cookieValue($login);
 
-        $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
-        $this->getJson('/api/v1/auth/me')->assertJsonPath('data.two_factor_enabled', true)
-            ->assertJsonMissingPath('data.two_factor_secret');
+        $refreshed = $this->withCredentials()
+            ->withUnencryptedCookie('refresh_token', $initialRefresh)
+            ->withHeaders($this->refreshHeaders())
+            ->postJson('/api/v1/auth/refresh')
+            ->assertOk()
+            ->assertJsonStructure(['access_token', 'expires_in', 'user']);
+        $nextRefresh = $this->cookieValue($refreshed);
 
-        $this->postJson('/api/v1/auth/login', [
+        $this->assertNotSame($initialRefresh, $nextRefresh);
+        $this->assertArrayNotHasKey('refresh_token', $refreshed->json());
+
+        $this->withToken($refreshed->json('access_token'))
+            ->withUnencryptedCookie('refresh_token', $nextRefresh)
+            ->postJson('/api/v1/auth/logout')
+            ->assertOk()
+            ->assertCookieExpired('refresh_token');
+
+        $this->withUnencryptedCookie('refresh_token', $nextRefresh)
+            ->withHeaders($this->refreshHeaders())
+            ->postJson('/api/v1/auth/refresh')
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'token_invalid');
+    }
+
+    public function test_refresh_rejects_bad_tokens_and_requires_allowed_origin_headers(): void
+    {
+        $this->withCredentials()
+            ->withUnencryptedCookie('refresh_token', 'not-a-token')
+            ->withHeaders($this->refreshHeaders())
+            ->postJson('/api/v1/auth/refresh')
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'token_invalid');
+
+        $this->flushHeaders()
+            ->withUnencryptedCookie('refresh_token', 'not-a-token')
+            ->postJson('/api/v1/auth/refresh')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'origin_not_allowed');
+
+        $this->flushHeaders()
+            ->withUnencryptedCookie('refresh_token', 'not-a-token')
+            ->withHeader('Origin', 'https://spa.example.test')
+            ->postJson('/api/v1/auth/refresh')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'csrf_header_required');
+    }
+
+    public function test_me_requires_valid_unexpired_access_token(): void
+    {
+        $user = User::factory()->create();
+        $issued = app(TokenService::class)->issueTokens($user, request());
+
+        $this->getJson('/api/v1/me')
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'token_invalid');
+
+        $this->withToken($issued['access_token'])->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('user.id', $user->getKey());
+
+        $expiredJwt = JWT::encode([
+            'sub' => (string) $user->getKey(),
+            'iat' => time() - 120,
+            'exp' => time() - 1,
+            'jti' => 'expired-access-token',
+            'role' => 'user',
+            'scope' => 'access',
+        ], self::JWT_SECRET, 'HS256');
+
+        $this->withToken($expiredJwt)->getJson('/api/v1/me')
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'token_expired');
+    }
+
+    public function test_two_factor_login_only_returns_the_group_five_hook(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create(['email' => 'two-factor@example.com']);
+        $user->forceFill(['two_factor_enabled_at' => now()])->save();
+
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => $user->email,
             'password' => 'password',
-        ])->assertStatus(202);
+        ])->assertAccepted()
+            ->assertJsonPath('requires_2fa', true)
+            ->assertJsonStructure(['two_factor_token']);
 
-        $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
-            'two_factor_code' => Google2FA::getCurrentOtp($secret),
-        ])->assertOk()
-            ->assertJsonPath('status', 'success');
+        $this->assertArrayNotHasKey('access_token', $response->json());
+        $this->assertNull($response->getCookie('refresh_token', false));
+    }
 
-        $this->postJson('/api/v1/auth/2fa/disable')->assertOk();
-        $this->assertFalse($user->fresh()->hasTwoFactorEnabled());
+    /**
+     * @return array{name: string, email: string, password: string, password_confirmation: string}
+     */
+    private function registrationData(
+        string $email,
+        string $name = 'New User',
+        string $password = 'StrongPass123!',
+    ): array {
+        return [
+            'name' => $name,
+            'email' => $email,
+            'password' => $password,
+            'password_confirmation' => $password,
+        ];
+    }
+
+    private function queuedOtp(): string
+    {
+        $otp = null;
+        Queue::assertPushed(SendOtpMailJob::class, function (SendOtpMailJob $job) use (&$otp): bool {
+            $otp = $job->otp;
+
+            return true;
+        });
+
+        $this->assertIsString($otp);
+
+        return $otp;
+    }
+
+    private function cookieValue(TestResponse $response): string
+    {
+        $cookie = $response->getCookie('refresh_token', false);
+        $this->assertNotNull($cookie);
+
+        return $cookie->getValue();
+    }
+
+    /**
+     * @return array{Origin: string, X-Requested-With: string}
+     */
+    private function refreshHeaders(): array
+    {
+        return [
+            'Origin' => 'https://spa.example.test',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ];
     }
 }

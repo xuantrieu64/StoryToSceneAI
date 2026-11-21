@@ -13,7 +13,16 @@ return new class extends Migration
     {
         Schema::create('user_daily_usages', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->date('usage_date');
+            $table->unsignedInteger('text_count')->default(0);
+            $table->unsignedInteger('standard_image_count')->default(0);
+            $table->unsignedInteger('premium_image_count')->default(0);
+            $table->unsignedInteger('tts_char_count')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent();
+
+            $table->unique(['user_id', 'usage_date']);
         });
     }
 

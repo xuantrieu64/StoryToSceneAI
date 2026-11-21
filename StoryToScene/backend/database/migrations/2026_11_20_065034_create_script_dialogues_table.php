@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,7 +14,16 @@ return new class extends Migration
     {
         Schema::create('script_dialogues', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->foreignId('script_id')->constrained('scripts')->cascadeOnDelete();
+            // NULL = người dẫn chuyện
+            $table->foreignId('character_id')->nullable()->constrained('characters')->noActionOnDelete();
+            $table->integer('line_order');
+            $table->longText('dialogue_text');
+            $table->timestamp('created_at')->useCurrent();   // [F-15]
+            $table->timestamp('updated_at')->useCurrent();
+
+            $table->index(['script_id', 'line_order']);
+            $table->index('character_id');
         });
     }
 

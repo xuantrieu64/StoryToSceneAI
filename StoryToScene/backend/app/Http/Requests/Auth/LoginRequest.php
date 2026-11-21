@@ -25,8 +25,12 @@ class LoginRequest extends FormRequest
         return [
             'email' => 'required|string|email',
             'password' => 'required|string',
-            'two_factor_code' => 'nullable|string|digits:6',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['email' => mb_strtolower(trim((string) $this->input('email', '')))]);
     }
 
     public function messages(): array
@@ -35,7 +39,6 @@ class LoginRequest extends FormRequest
             'email.required' => 'Vui lòng nhập email',
             'email.email' => 'Email không hợp lệ',
             'password.required' => 'Vui lòng nhập mật khẩu',
-            'two_factor_code.digits' => 'Mã xác minh hai lớp phải là 6 ký tự số',
         ];
     }
 }

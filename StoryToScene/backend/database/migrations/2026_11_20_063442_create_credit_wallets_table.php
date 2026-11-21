@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->unique()->constrained('users')->onDelete('cascade');
             $table->unsignedBigInteger('balance_available')->default(0);
             $table->unsignedBigInteger('balance_held')->default(0);
-            $table->timestamps('updated_at')->useCurrent();
+            $table->timestamps();
         });
     }
 
