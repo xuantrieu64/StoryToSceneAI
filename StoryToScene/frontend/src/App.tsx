@@ -13,6 +13,7 @@ import ProjectScripts from './Page/ProjectScripts'
 import ScriptEditorPage from './Page/ScriptEditorPage'
 import ProjectCharacters from './Page/ProjectCharacters'
 import CharacterDetailPage from './Page/CharacterDetailPage'
+import ProjectStoryboard from './Page/ProjectStoryboard'
 import { Smoke } from '@/dev/Smoke'
 
 function App() {
@@ -45,6 +46,11 @@ function App() {
         <Route path="/projects/:projectId/scripts/:scriptId" element={<ScriptEditorPage />} />
         <Route path="/projects/:projectId/characters" element={<ProjectCharacters />} />
         <Route path="/projects/:projectId/characters/:characterId" element={<CharacterDetailPage />} />
+        <Route path="/projects/:projectId/storyboard" element={<ProjectStoryboard mode="storyboard" />} />
+        {/* Mục 6, 7, 8 dùng chung màn hình với mục 5 (cùng component → chuyển qua lại không dựng lại) */}
+        <Route path="/projects/:projectId/frames" element={<ProjectStoryboard mode="frames" />} />
+        <Route path="/projects/:projectId/voice" element={<ProjectStoryboard mode="voice" />} />
+        <Route path="/projects/:projectId/video" element={<ProjectStoryboard mode="video" />} />
       </Routes>
 
       <Toaster position="top-right" />

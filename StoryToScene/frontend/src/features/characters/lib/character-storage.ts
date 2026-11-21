@@ -21,6 +21,13 @@ export type CharacterVersion = {
   description: string
   tier: GenerationTierId
   createdAt: string
+  /**
+   * true = ảnh mẫu thật (bấm "Tạo ảnh mẫu" / "Tạo phiên bản" hoặc tải ảnh lên).
+   * Bản v1 tạo kèm khi thêm nhân vật chỉ ghi lại mô tả ban đầu, chưa phải ảnh mẫu.
+   */
+  generated?: boolean
+  /** Ảnh người dùng tải lên làm ảnh mẫu (data URL) – có sẵn ngay, không cần chờ tạo. */
+  image?: string
 }
 
 export type Character = {
@@ -40,7 +47,7 @@ export type Character = {
 }
 
 export const CHARACTER_NAME_LIMIT = 40
-export const CHARACTER_DESCRIPTION_LIMIT = 400
+export const CHARACTER_DESCRIPTION_LIMIT = 500
 export const MAX_CHARACTER_VERSIONS = 4
 /** Thời gian mô phỏng "đang tạo bản xem trước". */
 export const GENERATION_MS = 4000
@@ -62,6 +69,9 @@ function normalizeVersion(value: unknown): CharacterVersion | null {
     description: isString(item.description) ? item.description : '',
     tier: item.tier === 'premium' ? 'premium' : 'standard',
     createdAt: item.createdAt,
+    // Bản lưu cũ chưa có cờ: mọi bản sau v1 đều do "Tạo phiên bản" sinh ra
+    ...(item.generated === true || item.number > 1 || isString(item.image) ? { generated: true } : {}),
+    ...(isString(item.image) && item.image.startsWith('data:image/') ? { image: item.image } : {}),
   }
 }
 
@@ -147,19 +157,54 @@ export function withNewVersion(character: Character, tier: GenerationTierId): Ch
     description: character.description,
     tier,
     createdAt: new Date().toISOString(),
+    generated: true,
   }
+  return withVersion(character, version, false)
+}
+
+/** Thêm ảnh mẫu tải lên (có sẵn ngay) và dùng luôn làm ảnh tham chiếu. */
+export function withUploadedSample(character: Character, image: string): Character {
+  const version: CharacterVersion = {
+    id: crypto.randomUUID(),
+    number: Math.max(...character.versions.map((item) => item.number)) + 1,
+    description: character.description,
+    tier: 'standard',
+    createdAt: new Date().toISOString(),
+    generated: true,
+    image,
+  }
+  return withVersion(character, version, true)
+}
+
+function withVersion(character: Character, version: CharacterVersion, makeActive: boolean): Character {
   let versions = [...character.versions, version]
   while (versions.length > MAX_CHARACTER_VERSIONS) {
     const oldest = versions.find((item) => item.id !== character.activeVersionId)
     if (!oldest) break
     versions = versions.filter((item) => item.id !== oldest.id)
   }
-  return { ...character, versions }
+  return { ...character, versions, ...(makeActive ? { activeVersionId: version.id } : {}) }
 }
 
 export type VersionStatus = 'generating' | 'ready'
 export const versionStatus = (version: CharacterVersion, now = Date.now()): VersionStatus =>
-  now - Date.parse(version.createdAt) < GENERATION_MS ? 'generating' : 'ready'
+  !version.image && now - Date.parse(version.createdAt) < GENERATION_MS ? 'generating' : 'ready'
+
+/** Các ảnh mẫu của nhân vật (tạo hoặc tải lên), mới nhất trước. */
+export const sampleVersions = (character: Character) => character.versions.filter((version) => version.generated).sort((a, b) => b.number - a.number)
+
+/** Ảnh mẫu dùng làm tham chiếu: bản đang dùng nếu là ảnh mẫu, không thì ảnh mẫu đã xong mới nhất. */
+export function referenceSample(character: Character, now = Date.now()) {
+  const active = activeVersion(character)
+  if (active.generated && versionStatus(active, now) === 'ready') return active
+  return sampleVersions(character).find((version) => versionStatus(version, now) === 'ready') ?? null
+}
+
+export type SampleStatus = 'none' | 'generating' | 'ready'
+export function sampleStatus(character: Character, now = Date.now()): SampleStatus {
+  if (referenceSample(character, now)) return 'ready'
+  return sampleVersions(character).some((version) => versionStatus(version, now) === 'generating') ? 'generating' : 'none'
+}
 
 /** Thời điểm phiên bản cuối cùng (trong các nhân vật) tạo xong – mốc dừng đồng hồ của useNow. */
 export const generationDeadline = (characters: Character[]) =>
