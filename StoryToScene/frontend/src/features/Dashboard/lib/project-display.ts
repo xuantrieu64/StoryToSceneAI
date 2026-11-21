@@ -24,6 +24,10 @@ export const projectPaths = {
   scriptAssistant: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/script-assistant`,
   scripts: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/scripts`,
   characters: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/characters`,
+  storyboard: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/storyboard`,
+  frames: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/frames`,
+  voice: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/voice`,
+  video: (projectId: string) => `/projects/${encodeURIComponent(projectId)}/video`,
   characterDetail: (projectId: string, characterId: string) => `/projects/${encodeURIComponent(projectId)}/characters/${encodeURIComponent(characterId)}`,
   scriptEditor: (projectId: string, scriptId: string) => `/projects/${encodeURIComponent(projectId)}/scripts/${encodeURIComponent(scriptId)}`,
 }

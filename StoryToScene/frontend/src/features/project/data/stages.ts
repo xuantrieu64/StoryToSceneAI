@@ -1,11 +1,16 @@
 /*
  * 8 công đoạn sản xuất của một dự án (màn hình Tổng quan & Sidebar).
- * Hiện mới có màn hình Truyện, Trợ lý kịch bản, Kịch bản và Nhân vật (`path`); các công đoạn khác chưa triển khai
+ * Hiện mới có màn hình Truyện, Trợ lý kịch bản, Kịch bản, Nhân vật, Phân cảnh, Khung hình, Lồng tiếng và Video (`path`); các công đoạn khác chưa triển khai
  * nên không có đường dẫn và hiển thị ở trạng thái chờ.
  */
 import { projectPaths } from '@/features/Dashboard/lib/project-display'
 import type { Project } from '@/features/Dashboard/types/project'
 import { isApproved, loadCharacters } from '@/features/characters/lib/character-storage'
+import { loadScripts } from '@/features/script/lib/script-storage'
+import { episodeClipProgress } from '@/features/storyboard/lib/clips'
+import { episodeFrameProgress } from '@/features/storyboard/lib/frames'
+import { storyboardProgress } from '@/features/storyboard/lib/storyboard-storage'
+import { episodeVoiceProgress } from '@/features/storyboard/lib/voice'
 
 export type StageId = 'story' | 'scriptAssistant' | 'script' | 'characters' | 'storyboard' | 'frames' | 'voice' | 'video'
 
@@ -24,7 +29,6 @@ export type Stage = {
   next: { title: string; description: string; cta: string }
 }
 
-const notStarted = () => 'Chưa có'
 const never = () => false
 
 export const stages: Stage[] = [
@@ -83,8 +87,15 @@ export const stages: Stage[] = [
     number: 5,
     title: 'Phân cảnh',
     description: 'Chia cảnh và cú máy cho từng tập.',
-    status: notStarted,
-    isDone: never,
+    status: (p) => {
+      const { done, total } = storyboardProgress(p.id, loadScripts(p.id))
+      return total > 0 ? `${done}/${total} tập` : 'Chưa có'
+    },
+    isDone: (p) => {
+      const { done, total } = storyboardProgress(p.id, loadScripts(p.id))
+      return total > 0 && done === total
+    },
+    path: projectPaths.storyboard,
     next: { title: 'Chia phân cảnh', description: 'Chia cảnh và cú máy cho từng tập.', cta: 'Mở Phân cảnh' },
   },
   {
@@ -92,8 +103,15 @@ export const stages: Stage[] = [
     number: 6,
     title: 'Khung hình',
     description: 'Tạo hình cho từng cú máy.',
-    status: notStarted,
-    isDone: never,
+    status: (p) => {
+      const { ready, total } = episodeFrameProgress(p.id, loadScripts(p.id))
+      return total > 0 ? `${ready}/${total} cú` : 'Chưa có'
+    },
+    isDone: (p) => {
+      const { ready, total } = episodeFrameProgress(p.id, loadScripts(p.id))
+      return total > 0 && ready === total
+    },
+    path: projectPaths.frames,
     next: { title: 'Tạo khung hình', description: 'Tạo hình cho từng cú máy.', cta: 'Mở Khung hình' },
   },
   {
@@ -101,8 +119,15 @@ export const stages: Stage[] = [
     number: 7,
     title: 'Lồng tiếng',
     description: 'Đọc lời thoại bằng giọng AI.',
-    status: notStarted,
-    isDone: never,
+    status: (p) => {
+      const { ready, total } = episodeVoiceProgress(p.id, loadScripts(p.id))
+      return total > 0 ? `${ready}/${total} câu` : 'Chưa có'
+    },
+    isDone: (p) => {
+      const { ready, total } = episodeVoiceProgress(p.id, loadScripts(p.id))
+      return total > 0 && ready === total
+    },
+    path: projectPaths.voice,
     next: { title: 'Lồng tiếng', description: 'Đọc lời thoại bằng giọng AI.', cta: 'Mở Lồng tiếng' },
   },
   {
@@ -110,8 +135,15 @@ export const stages: Stage[] = [
     number: 8,
     title: 'Video',
     description: 'Biến hình thành clip, xem thử cả tập.',
-    status: notStarted,
-    isDone: never,
+    status: (p) => {
+      const { ready, total } = episodeClipProgress(p.id, loadScripts(p.id))
+      return total > 0 ? `${ready}/${total} clip` : 'Chưa có'
+    },
+    isDone: (p) => {
+      const { ready, total } = episodeClipProgress(p.id, loadScripts(p.id))
+      return total > 0 && ready === total
+    },
+    path: projectPaths.video,
     next: { title: 'Dựng video', description: 'Biến hình thành clip, xem thử cả tập.', cta: 'Mở Video' },
   },
 ]
