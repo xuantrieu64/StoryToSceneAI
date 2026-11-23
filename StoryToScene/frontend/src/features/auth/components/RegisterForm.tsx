@@ -4,6 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, RotateCw, Send, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/auth/useAuth'
+import type { ApiError } from '@/types/auth'
 import { siteLinks } from '@/config/site-links'
 import { ActionLink } from '@/features/home/components/shared/ActionLink'
 import { AUTH_NOT_CONNECTED, authRoutes } from '../auth-config'
@@ -50,9 +53,15 @@ function VisibilityToggle({ shown, onToggle }: { shown: boolean; onToggle: () =>
 export function RegisterForm() {
   const id = useId()
   const [notice, setNotice] = useState<NoticeAt>(null)
+
+  const [authError, setAuthError] = useState<ApiError | null>(null)
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const { register, handleSubmit, control, formState, trigger, setError, setFocus } = useForm<RegisterValues>({
+  const { register, handleSubmit, control, formState, trigger, setError, setFocus, getValues } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { fullName: '', email: '', password: '', confirmPassword: '', code: '', agree: false },
   })
@@ -60,10 +69,36 @@ export function RegisterForm() {
   const password = useWatch({ control, name: 'password' })
   const agreed = useWatch({ control, name: 'agree' })
 
+  const { register: registerAccount, verifyEmail } = useAuth()
+  const navigate = useNavigate()
+
   /** Gửi mã xác minh: cần email hợp lệ; backend chưa có API nên chỉ báo chưa kết nối (không giả lập đã gửi). */
   const sendCode = async () => {
-    if (await trigger('email')) setNotice('code')
-    else setFocus('email')
+    setAuthError(null)
+    setAuthSuccess(null)
+    const valid = await trigger(['fullName', 'email', 'password', 'confirmPassword', 'agree'])
+    if (!valid) {
+      setFocus('email')
+      return
+    }
+
+    const values = getValues()
+    setIsSendingCode(true)
+    try {
+      await registerAccount({
+        name: values.fullName,
+        email: values.email,
+        password: values.password,
+        password_confirmation: values.confirmPassword,
+      })
+      setNotice(null)
+      setAuthSuccess('Mã xác minh đã được gửi đến email của bạn.')
+    } catch (error) {
+      setNotice('code')
+      setAuthError(error as ApiError)
+    } finally {
+      setIsSendingCode(false)
+    }
   }
 
   /** Đăng ký bằng Google: cần đồng ý điều khoản trước. */
@@ -78,8 +113,23 @@ export function RegisterForm() {
 
   const codeLabelId = `${id}-code-label`
 
+  const submitRegistration = async (values: RegisterValues) => {
+    setIsSubmitting(true)
+    setAuthError(null)
+
+    try {
+      await verifyEmail(values.email, values.code)
+      navigate(authRoutes.dashboard, { replace: true })
+    } catch (error) {
+      setNotice('submit')
+      setAuthError(error as ApiError)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <form noValidate onSubmit={handleSubmit(() => setNotice('submit'))}>
+    <form noValidate onSubmit={handleSubmit(submitRegistration)}>
       <div className="flex flex-col gap-4">
         <TextField
           id={`${id}-name`}
@@ -150,13 +200,15 @@ export function RegisterForm() {
           <button
             type="button"
             onClick={sendCode}
+            disabled={isSendingCode}
             className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-jade-700 px-4 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-jade-800 focus-visible:ring-3 focus-visible:ring-jade-500/40 focus-visible:outline-none"
           >
             <Send aria-hidden="true" className="size-4" />
-            Gửi mã xác minh
+            {isSendingCode ? 'Đang gửi mã...' : 'Gửi mã xác minh'}
           </button>
         </div>
-        {notice === 'code' && <FormNotice>{AUTH_NOT_CONNECTED}</FormNotice>}
+        {notice === 'code' && authError && <FormNotice tone="error">{authError.message}</FormNotice>}
+        {authSuccess && <FormNotice tone="info">{authSuccess}</FormNotice>}
 
         <p id={codeLabelId} className="mt-4 mb-2 text-sm leading-5 font-semibold text-slate-800">
           Nhập mã xác minh
@@ -167,18 +219,18 @@ export function RegisterForm() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1">
             <Controller
-            control={control}
-            name="code"
-            render={({ field }) => (
-              <OtpInput
-                id={`${id}-code`}
-                length={OTP_LENGTH}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                invalid={!!errors.code}
-                describedBy={errors.code ? `${id}-code-error` : undefined}
-              />
+              control={control}
+              name="code"
+              render={({ field }) => (
+                <OtpInput
+                  id={`${id}-code`}
+                  length={OTP_LENGTH}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  invalid={!!errors.code}
+                  describedBy={errors.code ? `${id}-code-error` : undefined}
+                />
               )}
             />
           </div>
@@ -232,12 +284,13 @@ export function RegisterForm() {
 
       <PrimaryButton
         type="submit"
+        disabled={isSubmitting}
         className="mt-5 h-[52px] gap-2 rounded-xl bg-jade-700 text-base shadow-[0_12px_24px_-12px_rgb(3_108_69/0.7)] hover:bg-jade-800"
       >
-        Đăng ký tài khoản
+        {isSubmitting ? 'Đang xác minh...' : 'Đăng ký tài khoản'}
         <ArrowRight aria-hidden="true" className="size-5" />
       </PrimaryButton>
-      {notice === 'submit' && <FormNotice>{AUTH_NOT_CONNECTED}</FormNotice>}
+      {notice === 'submit' && authError && <FormNotice tone="error">{authError.message}</FormNotice>}
 
       <OrDivider label="Hoặc" />
       <GoogleButton className="h-[52px] gap-3 rounded-xl text-base font-semibold [&_svg]:size-5" onClick={googleSignUp}>

@@ -11,11 +11,13 @@ import { UpgradeHeader } from '@/features/subscription/components/UpgradeHeader'
 import { UsageStats } from '@/features/subscription/components/UsageStats'
 import { sampleCurrentSubscription } from '@/features/subscription/data/current-subscription.sample'
 import { getPlan, subscriptionPlans, type BillingCycle } from '@/features/subscription/data/plans'
+import { useAuth } from '@/auth/useAuth'
 
 /** Trang "Nâng cấp gói" (/upgrade). */
 function Upgrade() {
   const [cycle, setCycle] = useState<BillingCycle>('monthly')
   const [guideOpen, setGuideOpen] = useState(false)
+  const { user } = useAuth()
 
   // TODO(api): thay dữ liệu mẫu bằng gói & mức sử dụng thật từ backend.
   const subscription = sampleCurrentSubscription
@@ -28,7 +30,7 @@ function Upgrade() {
       <main className="min-w-0 flex-1 px-8 pt-8 pb-10 max-lg:px-6 max-sm:px-4 max-sm:pt-5">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-6">
           <UpgradeHeader
-            accountInitial="T"
+            accountInitial={(user?.name.trim().charAt(0) || user?.email.charAt(0) || 'U').toUpperCase()}
             onOpenHelp={() => setGuideOpen(true)}
             onOpenNotifications={() => toast.info('Chưa có thông báo mới.')}
           />

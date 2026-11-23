@@ -1,11 +1,25 @@
 import { sectionIds } from '@/config/site-links'
 
-/** Đường dẫn dùng trong các trang xác thực (khớp với route khai báo trong App.tsx). */
+/** Đường dẫn dùng trong các trang xác thực. */
 export const authRoutes = {
   home: '/',
   login: '/login',
   register: '/register',
   dashboard: '/dashboard',
+} as const
+
+/** Endpoint xác thực của backend Laravel (base API: VITE_API_URL + /v1). */
+export const authEndpoints = {
+  register: '/auth/register',
+  verifyEmail: '/auth/verify-email',
+  resendOtp: '/auth/resend-otp',
+  login: '/auth/login',
+  googleLogin: '/auth/google',
+  refresh: '/auth/refresh',
+  logout: '/auth/logout',
+  twoFactorVerify: '/auth/2fa/verify',
+  twoFactorResend: '/auth/2fa/resend',
+  currentUser: '/me',
 } as const
 
 /** Link tới một section trên trang chủ (tải trang chủ rồi cuộn tới section). */
@@ -26,6 +40,6 @@ export const authNav = {
   ],
 }
 
-/** Thông báo dùng chung khi backend chưa có API xác thực (routes/api.php chỉ có /user và /health). */
+/** Thông báo chung cho chức năng chưa có giao diện hoặc chưa nối Google/2FA. */
 export const AUTH_NOT_CONNECTED =
-  'Chức năng này chưa được kết nối máy chủ (backend chưa có API đăng nhập/đăng ký). Dữ liệu bạn nhập chưa được gửi đi.'
+  'Chức năng này chưa được triển khai trên giao diện.'

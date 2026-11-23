@@ -2,8 +2,10 @@ import { useId, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
+import { useAuth } from '@/auth/useAuth'
+import type { ApiError } from '@/types/auth'
 import { AUTH_NOT_CONNECTED, authRoutes } from '../auth-config'
 import { FormNotice, GoogleButton, OrDivider, PrimaryButton, TextField } from './FormControls'
 
@@ -21,7 +23,15 @@ const bigPrimary = 'h-[52px] gap-2 rounded-xl bg-jade-700 text-base hover:bg-jad
 const bigGoogle = 'h-[52px] gap-3 rounded-xl text-base font-semibold [&_svg]:size-5'
 
 /** Đăng nhập bằng mật khẩu: email, mật khẩu (hiện/ẩn), ghi nhớ đăng nhập. */
-function PasswordForm({ onSubmitted, onForgot }: { onSubmitted: () => void; onForgot: () => void }) {
+function PasswordForm({
+  onSubmitted,
+  onForgot,
+  isLoading,
+}: {
+  onSubmitted: (values: z.infer<typeof passwordSchema>) => Promise<void>
+  onForgot: () => void
+  isLoading: boolean
+}) {
   const id = useId()
   const [showPassword, setShowPassword] = useState(false)
   const { register, handleSubmit, formState } = useForm<z.infer<typeof passwordSchema>>({
@@ -73,8 +83,8 @@ function PasswordForm({ onSubmitted, onForgot }: { onSubmitted: () => void; onFo
         <input type="checkbox" className="size-5 shrink-0 cursor-pointer rounded accent-jade-600" {...register('remember')} />
         Ghi nhớ đăng nhập trên thiết bị này
       </label>
-      <PrimaryButton type="submit" className={bigPrimary}>
-        Đăng nhập
+      <PrimaryButton type="submit" className={bigPrimary} disabled={isLoading}>
+        {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         <ArrowRight aria-hidden="true" className="size-5" />
       </PrimaryButton>
     </form>
@@ -116,10 +126,44 @@ function CodeForm({ onSubmitted, onBack }: { onSubmitted: () => void; onBack: ()
 export function LoginForm() {
   const [mode, setMode] = useState<'password' | 'code'>('password')
   const [notice, setNotice] = useState(false)
+  const [authError, setAuthError] = useState<ApiError | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const showNotice = () => setNotice(true)
   const switchMode = (next: 'password' | 'code') => {
     setMode(next)
     setNotice(false)
+    setAuthError(null)
+  }
+
+  const submitPassword = async (values: z.infer<typeof passwordSchema>) => {
+    setIsLoading(true)
+    setAuthError(null)
+
+    try {
+      const result = await login({
+        email: values.email,
+        password: values.password,
+      })
+
+      if ('requires_2fa' in result) {
+        setAuthError({
+          code: 'two_factor_required',
+          message: 'Tài khoản yêu cầu xác thực hai lớp. Giao diện xác minh 2FA chưa được triển khai.',
+          status: 202,
+        })
+        return
+      }
+
+      const state = location.state as { from?: string } | null
+      navigate(state?.from && state.from !== authRoutes.login ? state.from : authRoutes.dashboard, { replace: true })
+    } catch (error) {
+      setAuthError(error as ApiError)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -130,11 +174,12 @@ export function LoginForm() {
       <OrDivider label="HOẶC" />
 
       {mode === 'password' ? (
-        <PasswordForm onSubmitted={showNotice} onForgot={() => switchMode('code')} />
+        <PasswordForm onSubmitted={submitPassword} onForgot={() => switchMode('code')} isLoading={isLoading} />
       ) : (
         <CodeForm onSubmitted={showNotice} onBack={() => switchMode('password')} />
       )}
 
+      {authError && <FormNotice tone="error">{authError.message}</FormNotice>}
       {notice && <FormNotice>{AUTH_NOT_CONNECTED}</FormNotice>}
 
       <p className="mt-7 text-center text-[15px] leading-6 text-slate-700">

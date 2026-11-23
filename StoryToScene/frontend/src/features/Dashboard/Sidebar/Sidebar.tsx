@@ -1,7 +1,8 @@
 import { useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { siteLinks } from '@/config/site-links'
+import { useAuth } from '@/auth/useAuth'
 
 /* Kéo thanh phân chia để đổi chiều rộng Sidebar (chỉ trên màn hình > 760px). */
 const SIDEBAR_DEFAULT_WIDTH = 256
@@ -200,6 +201,8 @@ function OpenProjectSection({ rail, project }: { rail: boolean; project: OpenPro
 }
 
 export function Sidebar({ activeItem = 'projects', onOpenGuide, guideOpen = false, openProject }: SidebarProps) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const isNarrow = useIsNarrow()
   /** Thu gọn (người dùng chọn) hoặc màn hình hẹp → hiển thị dạng rail chỉ có icon. */
@@ -207,6 +210,11 @@ export function Sidebar({ activeItem = 'projects', onOpenGuide, guideOpen = fals
   const [width, setWidth] = useState(readStoredWidth)
   const [resizing, setResizing] = useState(false)
   const drag = useRef<{ startX: number; startWidth: number; width: number; collapsed: boolean } | null>(null)
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   function handleResizeStart(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return
@@ -382,19 +390,20 @@ export function Sidebar({ activeItem = 'projects', onOpenGuide, guideOpen = fals
         )}
 
         <button
-          aria-label="Tài khoản tvxt12"
+          aria-label={user ? `Đăng xuất tài khoản ${user.email}` : 'Đăng xuất'}
           className={`${rail ? RAIL_ITEM : 'mt-2 flex w-full items-center rounded-lg px-1.5 pb-1.5 pt-2 text-left'} hover:bg-gray-50`}
-          title={rail ? 'tvxt12' : undefined}
+          title={rail ? (user ? `Đăng xuất ${user.email}` : 'Đăng xuất') : 'Đăng xuất'}
           type="button"
+          onClick={() => void handleLogout()}
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#eaf7e9] text-xs font-bold text-[#39b536]">
-            T
+            {(user?.name.trim().charAt(0) || user?.email.charAt(0) || 'U').toUpperCase()}
           </span>
           {!rail && (
             <>
               <span className="grid min-w-0 flex-1 pl-2.5">
-                <strong className="truncate text-xs leading-4 text-[#111827]">tvxt12</strong>
-                <small className="truncate text-[11px] text-[#6b7280]">tvxt12@gmail.com</small>
+                <strong className="truncate text-xs leading-4 text-[#111827]">{user?.name || 'Tài khoản'}</strong>
+                <small className="truncate text-[11px] text-[#6b7280]">{user?.email || 'Chưa có thông tin'}</small>
               </span>
               <ChevronIcon />
             </>
