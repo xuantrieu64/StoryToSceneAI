@@ -3,7 +3,6 @@ import type {
   LoginPayload,
   LoginResponse,
   RegisterPayload,
-  SessionResponse,
   User,
 } from '@/types/auth'
 
@@ -13,8 +12,10 @@ export type AuthContextValue = {
   isLoading: boolean
   login: (payload: LoginPayload) => Promise<LoginResponse>
   register: (payload: RegisterPayload) => Promise<void>
-  verifyEmail: (email: string, otp: string) => Promise<SessionResponse>
+  verifyEmail: (email: string, otp: string) => Promise<void>
+  resendOtp: (email: string) => Promise<void>
   logout: () => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<LoginResponse>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

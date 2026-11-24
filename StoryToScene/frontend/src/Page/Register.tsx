@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ImagePlay, UserRoundPlus } from 'lucide-react'
 import { AuthIllustration } from '../features/auth/components/AuthIllustration'
 import { AuthPanel } from '../features/auth/components/AuthPanel'
@@ -8,6 +9,8 @@ import { RegisterForm } from '../features/auth/components/RegisterForm'
 
 /** Trang Đăng ký – /register */
 function Register() {
+  const [verifyingEmail, setVerifyingEmail] = useState(false)
+
   return (
     <AuthShell
       wideCard
@@ -32,8 +35,13 @@ function Register() {
       }
       illustration={<AuthIllustration storyTitle="Từ ý tưởng đến video chỉ với AI" storyIcon={ImagePlay} multilineTitle />}
       card={
-        <AuthPanel eyebrow="Tạo tài khoản miễn phí" title="Đăng ký tài khoản" titleId="register-title" compact>
-          <RegisterForm />
+        <AuthPanel
+          eyebrow={verifyingEmail ? 'Xác thực email' : 'Tạo tài khoản miễn phí'}
+          title={verifyingEmail ? 'Xác thực email' : 'Đăng ký tài khoản'}
+          titleId="register-title"
+          compact
+        >
+          <RegisterForm onVerificationChange={setVerifyingEmail} />
         </AuthPanel>
       }
       highlights={

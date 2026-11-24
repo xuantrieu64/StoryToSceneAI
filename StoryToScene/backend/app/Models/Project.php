@@ -15,9 +15,12 @@ class Project extends Model
     protected $fillable = [
         'user_id',
         'title',
+        'project_type',
+        'genre_note',
         'genre_id',
         'visual_style_id',
         'aspect_ratio',
+        'ai_language',
         'original_story_text',
         'status',
     ];

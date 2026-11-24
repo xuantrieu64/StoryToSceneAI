@@ -14,6 +14,7 @@ export type User = {
   created_at: string | null
 }
 
+//Đối tượng các kiểu dữ liệu gửi đi
 export type RegisterPayload = {
   name: string
   email: string

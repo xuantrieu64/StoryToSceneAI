@@ -44,7 +44,8 @@ export const authService = {
 
   // TODO: Google login cần credential id_token lấy từ Google Identity Services.
   googleLogin(_payload: GoogleLoginPayload): Promise<LoginResponse> {
-    throw new Error('Google login chưa được triển khai trên giao diện.')
+    // throw new Error('Google login chưa được triển khai trên giao diện.')
+    return api.post<LoginResponse>('/auth/google', _payload).then((response) => response.data)
   },
 
   // TODO: 2FA cần màn hình nhập OTP/mã khôi phục và gọi POST /auth/2fa/verify.

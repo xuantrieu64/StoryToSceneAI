@@ -1,7 +1,8 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { useAuth } from '@/auth/useAuth'
@@ -128,9 +129,30 @@ export function LoginForm() {
   const [notice, setNotice] = useState(false)
   const [authError, setAuthError] = useState<ApiError | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(400)
+  const googleButtonRef = useRef<HTMLDivElement>(null)
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  const routeState = location.state as { successMessage?: unknown } | null
+  const successMessage = typeof routeState?.successMessage === 'string' ? routeState.successMessage : null
+
+  useEffect(() => {
+    const element = googleButtonRef.current
+    if (!element) return
+
+    const updateWidth = (width: number) => {
+      setGoogleButtonWidth(Math.max(200, Math.min(400, Math.floor(width))))
+    }
+    const observer = new ResizeObserver(([entry]) => updateWidth(entry.contentRect.width))
+    observer.observe(element)
+    updateWidth(element.getBoundingClientRect().width)
+
+    return () => observer.disconnect()
+  }, [])
+
   const showNotice = () => setNotice(true)
   const switchMode = (next: 'password' | 'code') => {
     setMode(next)
@@ -166,11 +188,86 @@ export function LoginForm() {
     }
   }
 
+  const requireGoogleAgreement = () => {
+    setAuthError(null)
+    if (!googleClientId) {
+      setAuthError({
+        code: 'google_not_configured',
+        message: 'Đăng nhập bằng Google hiện chưa được cấu hình.',
+        status: 0,
+      })
+    }
+  }
+
+  const submitGoogleCredential = async (response: CredentialResponse) => {
+    if (!response.credential) {
+      setAuthError({
+        code: 'google_credential_missing',
+        message: 'Google không trả về thông tin xác thực. Vui lòng thử lại.',
+        status: 0,
+      })
+      return
+    }
+
+    setAuthError(null)
+    setIsGoogleLoading(true)
+    try {
+      const result = await loginWithGoogle(response.credential)
+      if ('requires_2fa' in result) {
+        setAuthError({
+          code: 'two_factor_required',
+          message: 'Tài khoản yêu cầu xác thực hai lớp. Giao diện xác minh 2FA chưa được triển khai.',
+          status: 202,
+        })
+        return
+      }
+
+      const state = location.state as { from?: string } | null
+      navigate(state?.from && state.from !== authRoutes.login ? state.from : authRoutes.dashboard, { replace: true })
+    } catch (error) {
+      setAuthError(error as ApiError)
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    setAuthError({
+      code: 'google_login_failed',
+      message: 'Không thể đăng nhập bằng Google. Vui lòng thử lại.',
+      status: 0,
+    })
+  }
+
   return (
     <div>
-      <GoogleButton className={bigGoogle} onClick={showNotice}>
-        Tiếp tục với Google
-      </GoogleButton>
+      {googleClientId ? (
+        <div className="relative" ref={googleButtonRef}>
+          <GoogleButton
+            aria-hidden="true"
+            tabIndex={-1}
+            className={`pointer-events-none ${bigGoogle}`}
+          >
+            {isGoogleLoading ? 'Đang đăng nhập...' : 'Tiếp tục với Google'}
+          </GoogleButton>
+          <GoogleLogin
+            onSuccess={(response) => void submitGoogleCredential(response)}
+            onError={handleGoogleError}
+            text="continue_with"
+            theme="outline"
+            shape="rectangular"
+            width={String(googleButtonWidth)}
+            containerProps={{
+              className: `absolute left-1/2 top-0 z-10 -translate-x-1/2 opacity-0 ${isGoogleLoading ? 'pointer-events-none' : ''}`,
+              style: { width: `${googleButtonWidth}px`, height: '100%' },
+            }}
+          />
+        </div>
+      ) : (
+        <GoogleButton className={bigGoogle} onClick={requireGoogleAgreement}>
+          Tiếp tục với Google
+        </GoogleButton>
+      )}
       <OrDivider label="HOẶC" />
 
       {mode === 'password' ? (
@@ -180,6 +277,7 @@ export function LoginForm() {
       )}
 
       {authError && <FormNotice tone="error">{authError.message}</FormNotice>}
+      {successMessage && <FormNotice tone="info">{successMessage}</FormNotice>}
       {notice && <FormNotice>{AUTH_NOT_CONNECTED}</FormNotice>}
 
       <p className="mt-7 text-center text-[15px] leading-6 text-slate-700">

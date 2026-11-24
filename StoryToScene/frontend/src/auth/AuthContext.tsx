@@ -6,7 +6,6 @@ import type {
   LoginPayload,
   LoginResponse,
   RegisterPayload,
-  SessionResponse,
   User,
 } from '@/types/auth'
 
@@ -51,11 +50,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.register(payload)
   }
 
-  async function verifyEmail(email: string, otp: string): Promise<SessionResponse> {
+  async function verifyEmail(email: string, otp: string): Promise<void> {
     const session = await authService.verifyEmail({ email, otp })
     setAccessToken(session.access_token)
     setUser(session.user)
-    return session
+
+    try {
+      await authService.logout()
+    } finally {
+      setAccessToken(null)
+      setUser(null)
+    }
+  }
+
+  async function resendOtp(email: string): Promise<void> {
+    await authService.resendOtp(email)
   }
 
   async function logout(): Promise<void> {
@@ -67,6 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function loginWithGoogle(credential: string): Promise<LoginResponse> {
+    const result = await authService.googleLogin({ credential })
+    if ('requires_2fa' in result) return result
+
+    setAccessToken(result.access_token)
+    setUser(result.user)
+    return result
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -76,7 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         verifyEmail,
+        resendOtp,
         logout,
+        loginWithGoogle,
       }}
     >
       {children}
